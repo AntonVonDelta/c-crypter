@@ -32,3 +32,4 @@ For inline-used strings:
 ### Attention:
 - It is important to make sure that strings are not split between lines. No multiline-string support.
 - Unicode strings are not supported. E.g: `L"string"`
+- some strings are not encrypted on purpose: all smaller than 5 characters or those that don't contain characters in [a-zA-Z0-9] range
