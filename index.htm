@@ -1,0 +1,577 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+
+<script>
+/*
+Another program flow concept:
+	main() ->split every line and feed it into
+	  ->parseLine():
+			-var a=strip_comment  	//saves comment for later to be added
+			-var b=strip_strings	//saves all strings in an array
+			-var c=encrypt_strings(b)	//the encrypted version of arrays
+			-var d=check_line_type	//checks if the line contains an inline-array with strings or just a simple string...
+			...considering -d- change the line
+
+
+*/
+
+	//Generate/modify this code here: https://www.freeformatter.com/javascript-escape.html#ad-output
+	var default_obfus="#pragma once\r\n\r\n#include <windows.h>\r\n#include <winternl.h>\r\n#include <intrin.h>\r\n#include <iostream>\r\n#include <stdio.h>\r\n#include <psapi.h>\r\n#include \"Header.h\"\r\n\r\n\/\/THIS LIBRARY WILL STORE OBFUSCATED STRING AND MEANS OF DECRYPTING THEM\r\n\r\n\/\/Generic Count\r\n#define _C(a)\t\t\tsizeof(a)\/sizeof(a[0])\r\n\r\n\/\/FastDecrypt the local array\r\n#define _FD(a)\t\t\t_inline_decrypt(a,sizeof(a) \/ sizeof(a[0]))\r\n\r\n\/\/FastDecrypt the local array One Dimension\r\n#define _FDO(a)\t\t\t_inline_decrypt_one(a)\r\n\r\n#define null_char 0x02\r\n#define STRING_PWS 0x7f\r\n\r\n\/\/START\/\/\r\n\/\/END\/\/\r\n\r\n\/\/Decrypts publicly declared array-from \"content\"\r\nchar* _S(char keys_buffer[512], int str_id) {\r\n\tint string_count = _C(content);\r\n\tint cursor = 0;\r\n\tchar enc_null_char = null_char^STRING_PWS;\r\n\r\n\tif (str_id >= string_count) return NULL;\r\n\r\n\twhile (content[str_id][cursor] != enc_null_char && cursor<511) {\r\n\t\tkeys_buffer[cursor] = content[str_id][cursor] ^ STRING_PWS;\r\n\t\tcursor++;\r\n\t}\r\n\tkeys_buffer[cursor] = 0;\r\n\r\n\treturn keys_buffer;\r\n}\r\n\r\n\r\n\r\n\/\/Decrypts encrypted arrays declared in code\r\nvoid _inline_decrypt(char buffer[][512], int count) {\r\n\tchar enc_null_char = null_char^STRING_PWS;\r\n\r\n\tfor (int i = 0; i < count; i++) {\r\n\t\tint j = 0;\r\n\t\tfor (j; buffer[i][j] != enc_null_char && j<511; j++) {\r\n\t\t\tbuffer[i][j] = buffer[i][j] ^ STRING_PWS;\r\n\t\t}\r\n\t\tbuffer[i][j] = 0;\r\n\t}\r\n}\r\n\r\n\/\/Decrypts encrypted arrays declared in code\r\nvoid _inline_decrypt_one(char *buffer) {\r\n\tchar enc_null_char = null_char^STRING_PWS;\r\n\t\r\n\tint j = 0;\r\n\tfor (j; buffer[j] != enc_null_char && j<511; j++) {\r\n\t\tbuffer[j] = buffer[j] ^ STRING_PWS;\r\n\t}\r\n\tbuffer[j] = 0;\r\n}";
+	
+	var pws=0x7f;
+	var null_char=2;		//instead of 0
+	var string_markup=31;	//markup for strings in a line -replaces string with one character
+	var txta;
+	var txtaa;
+	var txtb;
+	var txtaa;
+	var log;
+	
+function save(){
+	localStorage.setItem("enc_input", document.getElementById("a").value);
+	localStorage.setItem("obfus_input", document.getElementById("aa").value);
+	
+	localStorage.setItem("null_char",document.getElementById("null_char").value);
+	localStorage.setItem("pws",document.getElementById("pws").value);
+}
+function load(){
+	var t="";
+	txta=document.getElementById("a");
+	txtaa=document.getElementById("aa");
+	txtb=document.getElementById("b");
+	log=document.getElementById("log");
+	
+	if( (t=localStorage.getItem("enc_input"))!=null )txta.value=t;
+	if( (t=localStorage.getItem("obfus_input"))!=null )txtaa.value=t;
+	
+	if( (t=localStorage.getItem("null_char"))!=null ) null_char=parseInt(t);
+	if( (t=localStorage.getItem("pws"))!=null ) pws=parseInt(t);
+	
+	document.getElementById("null_char").value="0x"+null_char.toString(16);
+	document.getElementById("pws").value="0x"+pws.toString(16);
+	
+	obfus={keys_defines:"",head:"",bottom:"",content:"",look_table:[]};
+	log.innerHTML='';
+	var_count=-1;
+}
+function restore_default(){
+	txtaa.value=default_obfus;
+}
+console.clear();		//clear console
+String.prototype.countSubstr=function(x){return this.split(x).length-1}
+String.prototype.cutAt=function(index,len,replacement) {return this.substr(0, index) + replacement+ this.substr(index + len);}
+String.prototype.replaceAt=function(index, replacement) { return this.substr(0, index) + replacement+ this.substr(index +1);}
+function p(x) {console.log(x);}
+function gen(x) {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < x; i++)text += possible.charAt(Math.floor(Math.random() * possible.length));
+  return text;
+}
+String.prototype.hash=function(lim){
+	var str=this;var hash = 0;
+	if (str.length == 0) return hash;
+	for (i = 0; i < str.length; i++) {
+		char = str.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash=hash & (0xFFFFFFFF-0x80000000);
+		hash=hash%lim;
+	}
+	return hash;
+}
+String.prototype.replaceAtMark=function(y){
+	//x is a string with a string_markup character. Y is a new string that will be inserted at the first mark found
+	return this.replaceAt( this.indexOf(String.fromCharCode(string_markup)), y );
+}
+function view_look_table(){
+	//used for debugging-views the lookup table from obfus object
+	for(var i=0;i<obfus.look_table.length;i++) if(obfus.look_table[i]!=null)p(i+" -> "+obfus.look_table[i]);
+}
+function err(x,d=""){
+	//later:make it red
+	
+	if(d!="")
+		log.innerHTML+="<span style='color:red;font-weight:bold'>"+x+"<br><span style='margin-left:20px'>-->Additional info: <span style='font-weight:normal'>"+d+"</span></span></span><br><br>";
+	else log.innerHTML+="<span style='color:red;font-weight:bold'>"+x+"</span><br><br>";
+}
+function notif(x,d=""){
+	if(d!="")
+		log.innerHTML+="<span style='color:green;font-weight:bold'>"+x+"<br><span style='margin-left:20px'>-->Additional info: <span style='font-weight:normal'>"+d+"</span></span></span><br><br>";
+	else log.innerHTML+="<span style='color:green;font-weight:bold'>"+x+"</span><br><br>";
+}
+function notif_add(d){
+	//only adds "Additional data" to notif-part oflog
+	log.innerHTML+="<span style='color:green;font-weight:bold'><span style='margin-left:20px'>-->Additional info: <span style='font-weight:normal'>"+d+"</span></span></span><br>";
+}
+function err_add(d){
+	log.innerHTML+="<span style='color:red;font-weight:bold'><span style='margin-left:20px'>-->Additional info: <span style='font-weight:normal'>"+d+"</span></span></span><br>";
+}
+
+var max_keys_buffer_index=1;		// char keys_buffer[max_keys_buffer_index][512]		-->defiend in obfus
+var var_count=-1;		//so that when it is incremented it starts from 0
+var obfus={keys_defines:"",head:"",bottom:"",content:"",look_table:[]};
+
+function checkEncryption(x){
+	var lines=x.split("\n");
+	var in_string=false,string="";
+	var found_string=false;
+	var not_strings=[];
+	var unecrypted_strings=[];
+	
+	for(var i=0;i<lines.length;i++){
+		if(lines[i].search(/[\w{}]/)==-1) continue;
+		in_string=false;
+		string="";
+		var line=lines[i];
+		
+		for(var j=0;j<line.length;j++){
+			if(line.charCodeAt(j)<32 || line.charCodeAt(j)>126) {continue;}
+			
+			if(j<line.length-1 && !in_string && line[j]=='/' && line[j+1]=='/'){
+				//this is a comment..
+				break;
+			}
+			
+			if(line[j]=='"'){
+				if(!in_string){
+					in_string=true;
+				}else{
+					in_string=false;
+					
+					if( line[(j-string.length-2)]=="L" ){
+						//not good:the string is Unicode. Format: L"string"
+						//not_strings={line_nr:0,string:"",line;""};
+						not_strings.push({line_nr:(i+1),string:"L\""+string+"\"",line:line});
+						continue;
+					}
+					
+					if(string.search(/[a-zA-Z0-9]+/)!=-1 && string.length>=5){
+						unecrypted_strings.push({line_nr:(i+1),string:"\""+string+"\"",line:line});
+					}else{
+						not_strings.push({line_nr:(i+1),string:"\""+string+"\"",line:line});
+					}
+				}
+				string="";
+				continue;
+			}
+			string+=line[j];
+			//Escape next character
+			if(line[j]=='\\'){
+				j++;
+				if(line.charCodeAt(j)<32 || line.charCodeAt(j)>126) {continue;}
+				string+=line[j];
+				continue;
+			}
+			
+		}
+	}
+	if(unecrypted_strings.length>0){
+		err("Encryption not complete. Found readable string.");
+		for(var i=0;i<unecrypted_strings.length;i++){
+			err_add("on line:"+unecrypted_strings[i].line_nr+" ,string: "+unecrypted_strings[i].string+" ,line: "+unecrypted_strings[i].line);
+		}
+	}else{
+		notif("Checking encryption completed.","No Strings left unecrypted");
+	}
+	if(not_strings.length>0) {
+		notif("Although there are some unecrypted string-like elements");
+		for(var i=0;i<not_strings.length;i++){
+			notif_add("on line:"+not_strings[i].line_nr+" ,string: "+not_strings[i].string+" ,line: "+not_strings[i].line);
+		}
+	}
+}
+function parseObfus(){
+	//Parse the obfus file-cuts it in half and then analyzes/stores the defines
+	var input=txtaa.value;
+	var lines=input.split("\n");
+	var middle_section="";
+	
+	if(input.indexOf("//START//")==-1 || input.indexOf("//END//")==-1) err("Incorrect format of the obufs file!","Missing //START// or //END// header");
+
+	
+	var switch_side=0;
+	for(var i=0;i<lines.length;i++){
+		if(lines[i].search(/#define\s+null_char/)!=-1 || lines[i].search(/#define\s+STRING_PWS/)!=-1 || lines[i].search(/[\w{}]/)==-1){
+			continue;//don't include thse defines-they might be custom
+		}
+		if(switch_side!=1 && lines[i].search(/^\s*char\s+keys_buffer\[/)!=-1 ){
+			err("An additional keys_buffer might have been declared outside of keys zone in obfus file.Do not declare this array!Trying to fix...","on line: "+(i+1)+" ,string:"+lines[i]);
+			continue;
+		}
+		if(switch_side!=1 && lines[i].search(/^\s*char\s+content\[\]/)!=-1 ){
+			err("Array 'content' found outside of keys-zone.Trying to fix...","on line: "+(i+1)+" ,string:"+lines[i]);
+			continue;
+		}
+		if(lines[i]=="//START//") {switch_side=1;continue;}
+		if(lines[i]=="//END//") {switch_side=2;continue;}
+		
+		if(switch_side==0) obfus.head+=lines[i]+"\n";
+		if(switch_side==1) middle_section+=lines[i]+"\n";
+		if(switch_side==2) obfus.bottom+=lines[i]+"\n";
+		
+	}
+	
+	lines=middle_section.split("\n");
+	var find;
+	for(var i=0;i<lines.length;i++){
+		if((find=lines[i].match(/#define str_(\w+)_(\d+) (\d+)/))!=null){
+			obfus.keys_defines+=lines[i]+"\n";
+			obfus.look_table[find[2]]=find[1];
+			var_count=parseInt(find[3]);
+			
+			continue;
+		}
+		
+		if((find=lines[i].match(/char\s+content\[\]/))!=null){
+			obfus.content+=lines[i];
+		}
+	}
+
+	
+	if(obfus.content=="") {
+		obfus.content+="char content[][512]={";
+	}else{
+		//content array is defined so there must be some data in it
+		//Format: char content[][]={{},{},{}  };
+		obfus.content+=obfus.content.slice(0,-2)+",";
+	}
+	
+}
+function getName(x){
+	//returns a short name from a sentence
+	var_count++;
+	
+	var xhash=x.hash(2000);		//first take the hash then lower the case
+	x=x.toLowerCase();
+	
+	var words=x.match(/([a-zA-Z])+/g);
+	
+	if(words==null){
+		//what on earth is this? stars in the sky? or numbers? Are hidding your phone number or what?
+		return "Number";
+	}
+	
+	//sort words by length
+	for(var i=0;i<words.length-1;i++){
+		for(var j=i+1;j<words.length;j++){
+			if(words[j].length>words[i].length){
+				var t=words[i];
+				words[i]=words[j];
+				words[j]=t;
+			}
+		}
+	}
+	
+	var t="";
+	
+	words[0]=words[0].replaceAt(0,words[0][0].toUpperCase());
+	if(words.length>1){
+		words[1]=words[1].replaceAt(0,words[1][0].toUpperCase());
+		return words[0].substr(0,6)+words[1].substr(0,4);
+	}
+	return words[0].substr(0,10);
+}
+
+function pre_parse(x){
+	//prepare data about this line
+	var obj={comment:"",strings:[],body:"",type:0};		//strings->all strings; body:line without comment; type:0-inline strings; 1-string arrays
+	var in_string=false;
+	var string="";
+	
+
+	var find;
+	if((find=x.match(/char (\w+)(\[\d*\])+\s*=\s*{*\s*"/))!=null){
+		//array found
+		if( (find=x.match(/char\s+(\w+)(\[\d*\])(\[\d*\])?\s*=\s*{*\s*"/))!=null){
+			obj.type=1;
+			obj.array_name=find[1];
+			obj.dimensions=(find[3]==null?1:2);
+		}else{
+			//this is an array with bigger dimesions: err
+			err("Array with more than 2 dimensions. Try to reduce or enhance code.","line:"+x);
+			return {comment:"",strings:[],body:x,type:0};
+		}
+	}
+	
+	for(i=0;i<x.length;i++){
+		if(i<x.length-1 && !in_string && x[i]=='/' && x[i+1]=='/'){
+			//this is a comment..
+			obj.comment=x.substr(i);
+			break;
+		}
+		if(!in_string && x[i]=='\''){
+			//this section looks like this: 'X' where X is a single charcater. 
+			//WARNING:this X can be a quote.e.g: '"' or '\''. Max characters inside commas:2
+			if(x[i+1]!="'" && x[i+2]!="'" && x[i+3]!="'") err("Problem with quote.Check the number of characters inside.","on character: "+(i+1)+", line:"+x);
+			
+			obj.body+="'";
+			while(i<x.length-1 && x[++i]!="'"){obj.body+=x[i];}
+			obj.body+="'";
+			
+			continue;
+		}
+		
+		if(x[i]=='"'){
+			if(!in_string){
+				in_string=true;
+				obj.body+=String.fromCharCode(string_markup);
+			}else{
+				in_string=false;
+				
+				if( x[(i-string.length-2)]=="L" ){
+					obj.strings.push({string:string,unicode:true });	//Unicode
+				}else obj.strings.push({string:string,unicode:false });
+				
+				continue;
+			}
+
+			string="";
+			continue;
+		}
+
+		if(x.charCodeAt(i)!=9 && (x.charCodeAt(i)<32 || x.charCodeAt(i)>126)) {err("Invalid character!(code:"+x.charCodeAt(i)+";pos:"+i+";context:"+x.substr((i-7<0?0:i-7),i+7)+")",x);continue;}
+		if(!in_string) {obj.body+=x[i]; continue;}
+
+		string+=x[i];
+		if(x[i]=='\\'){
+			//Escape next character:important because the next one could be a comma that could break this parser
+			i++;
+			if(x.charCodeAt(i)!=9 && (x.charCodeAt(i)<32 || x.charCodeAt(i)>126)) {err("Invalid character!(code:"+x.charCodeAt(i)+";pos:"+i+";context:"+x.substr((i-7<0?0:i-7),i+7)+")",x);continue;}
+			string+=x[i];
+
+			continue;
+		}
+	}
+	
+	
+	return obj;
+}
+
+function parseString(x){
+	//Returns encrypted string in an array format: "{byte1,byte2,...,byten}"
+	var fin_array="{";
+	
+	for(var i=0;i<x.length;i++){
+		if(x.charCodeAt(i)<32 || x.charCodeAt(i)>126) {err("Invalid character!",x);continue;}
+		
+		if(x[i]=='\\'){
+			i++;
+			if(x.charCodeAt(i)<32 || x.charCodeAt(i)>126) {err("Invalid character!",x);continue;}
+			
+			switch(x[i]){
+				case 'b':fin_array+="0x"+(0x08^pws).toString(16)+",";break;
+				case 'a':fin_array+="0x"+(0x07^pws).toString(16)+",";break;
+				case 'n':fin_array+="0x"+(0x0a^pws).toString(16)+",";break;
+				case 'r':fin_array+="0x"+(0x0d^pws).toString(16)+",";break;
+				case '\\':fin_array+="0x"+(0x5C^pws).toString(16)+",";break;
+				case '"':fin_array+="0x"+(0x22^pws).toString(16)+",";break;
+				default:err("CANNOT FIND ESCAPED LETTER: string corrupted",x);
+
+			}
+			continue;
+			
+		}
+		
+		fin_array+="0x"+(x.charCodeAt(i)^pws).toString(16)+",";
+	}
+	fin_array+="0x"+(null_char^pws).toString(16);
+	fin_array+="}";
+	
+	return fin_array;
+}
+function parseLine(x){
+	var obj={line:"",keys:"",enc_array:"",mode:0};		//mode: 0-inline strings; 1-string arrays
+	var info=pre_parse(x);
+	var final_line="";
+    var string="";
+    var string_reg=/\"(.+?)\"/g;
+	var index=0;
+	
+	var in_string=false;
+	
+	
+	if(info.strings.length==0){
+		//nothing to do here..skip
+		obj.line=info.body+info.comment;
+		if(info.body.indexOf(String.fromCharCode(string_markup))!=-1) err("Found string-replacement character in final output.Code has been altered.Try modifying 'string_markup' variable in program.");
+		return obj;
+	}
+	
+	if(info.type==0){
+		//simple string used probably in a function
+		
+		for(var i=0;i<info.strings.length;i++){
+			string=info.strings[i].string;
+			
+			if( info.strings[i].unicode ){
+				//not good:the string is Unicode. Format: L"string"
+				info.body=info.body.replaceAtMark("\""+string+"\"");
+				continue;
+			}
+			
+			if(string.search(/[a-zA-Z0-9]+/)==-1 || string.length<5){
+				//no word found in the string: why then hide it?
+				info.body=info.body.replaceAtMark("\""+string+"\"");
+				continue;
+			}
+			var xhash=string.hash(2000);
+			var generated_name=getName(string);		//must be called once or var_count will increase uselessly
+			var name="str_"+generated_name+"_"+xhash;
+			
+			if(index>max_keys_buffer_index){max_keys_buffer_index=index;}
+			
+			info.body=info.body.replaceAtMark("_S(keys_buffer["+index+"],"+name+")");
+			index++;
+			
+			if(obfus.look_table[xhash]!=null && obfus.look_table[xhash]==generated_name){
+				//This variable already exists
+				var_count--;
+			}else{
+				obj.keys+="#define "+name+" "+var_count+"\t\t//char "+name+"[]={\""+string+"\"};\n";
+				obj.enc_array+=parseString(string)+",";
+				obfus.look_table[xhash]=generated_name;
+			}
+			
+		}
+	}else{
+		//array of strings
+		
+		for(var i=0;i<info.strings.length;i++){
+			string=info.strings[i].string;
+			
+			info.body=info.body.replaceAtMark(parseString(string));
+		}
+		if(info.dimensions==2)
+			info.body+="\n_FD("+info.array_name+");\t\t//Now decrypt in memory this array";
+		else info.body+="\n_FDO("+info.array_name+");\t\t//Now decrypt in memory this array";
+	}
+	
+	if(info.body.indexOf(String.fromCharCode(string_markup))!=-1) err("Found string-replacement character in final output.Code has been altered.Try modifying 'string_markup' variable in program.");
+	obj.line=info.body+info.comment;
+	
+	return obj;
+}
+function program_encrypt(){
+	//Parse input
+	save();
+	load();
+	
+	parseObfus();
+	
+	//clean previous output
+	txtb.value="";
+	txtaa.value="";
+	
+	var input=txta.value;
+	var lines=input.split("\n");
+	var source_out="";			//output for the source code
+	var temp_modified_code="";
+	
+	if(input.search(/\n\s*#ifdef\s+_DEBUG/)==-1) err("Can't find #ifdef _DEBUG!");
+	if(input.search(/\n\s*#ifndef\s+_DEBUG/)==-1) err("Can't find #ifndef _DEBUG!");
+	
+	//Filter the _NOT_DEBUG part-we don't need it;keep only the _DEBUG
+	var filtered="",filter=0;
+	for(var i=0;i<lines.length;i++){
+		if(lines[i].search(/^\s*#ifndef\s+_DEBUG/)!=-1){
+			filter=1;
+		}
+		
+		if(filter==0) filtered+=lines[i]+"\n";
+		
+		if(filter==1 && lines[i].search(/^\s*#endif/)!=-1){
+			filter=0;
+		}
+	}
+	
+	source_out=filtered;
+	lines=filtered.split("\n");
+	
+	var in_code=false;			//true if inside #ifdef _DEBUG -excluding pragmas
+	
+	for(var i=0;i<lines.length;i++){
+		if(lines[i].search(/^\s*#endif _DEBUG/)!=-1) {
+			in_code=false;
+			source_out+="#endif\n";
+			break;
+		}
+	
+		if(in_code){
+			var obj=parseLine(lines[i]);
+			source_out+=obj.line+"\n";
+			obfus.keys_defines+=obj.keys;
+			obfus.content+=obj.enc_array;
+			
+			if(obj.keys!="") p(obj.keys);
+			temp_modified_code+=obj.line+"\n";	//used for later checking of encryption
+		}
+	
+		if(lines[i].search(/^\s*#ifdef\s+_DEBUG/)!=-1){
+			in_code=true;
+			source_out+="//NEXT: code with strings encrypted\n#ifndef _DEBUG\n";
+		}
+	}
+	
+	
+	notif("Used null character is: "+null_char,"#define null_char 0x"+null_char.toString(16));
+	notif("Used password for encryption is: "+pws,"#define STRING_PWS 0x"+pws.toString(16));
+	notif("Generated the keys_buffer..","char keys_buffer["+max_keys_buffer_index+"][512];");
+	checkEncryption(temp_modified_code);	//makes sure there are no strings left
+
+	txtb.value=source_out;
+	
+	obfus.content=obfus.content.slice(0,-1)+"};";
+	txtaa.value=obfus.head+("#define null_char 0x"+null_char.toString(16)+"\n")+("#define STRING_PWS 0x"+pws.toString(16)+"\n")+
+		"//START//\n"+obfus.keys_defines+obfus.content+"\nchar keys_buffer["+max_keys_buffer_index+"][512];\n"+"//END//\n"+obfus.bottom;
+		
+	save();
+}
+
+</script>
+
+
+
+</head><body style="margin:0" onload="load()">
+	<div style="display:inline-block;width:50%">
+		<label>C++ code (to be parsed):</label>
+		<textarea id="a" style="width:100%;height:460px"></textarea>
+	</div>
+	<div style="display:inline-block;width:49%;">
+		<label>Obfus code (this is updated):</label>
+		<textarea id="aa" style="width:100%;height:300px"></textarea>
+		<label>C++ code result:</label>
+		<textarea id="b" style="margin-top:10px;width:100%;height:150px;border: 2px solid black;"></textarea>
+	</div>
+	<button onclick="program_encrypt()">Program Encrypt</button>
+	<button onclick="restore_default()">Restore default obfus code</button>
+	<p style="margin-top:10px"></p>
+	<label>Replacement for null character(instead of 0x00):</label><input id="null_char" value="0x2" type="text">
+	<br>
+	<label>Encryption key(1 byte): </label><input id="pws" value="0x7f" type="text">
+	<p style="margin-top:20px"></p>
+	<label>Log:</label>
+	<div id="log" style="height:100%;margin-left:10px;font-size: 14px;font-family: monospace;"></div>
+	
+	
+	
+		<!--
+	Obfus file:
+		...includes..
+		...pragmas...
+		...simple defines...
+			Ex.: #define null_string
+		
+		//START//
+		#define str_AAAA_1245 0
+		....
+		#define str_QQQQ_1 X
+		char content[][512]={{}};
+		char keys_buffer[][512];
+		//END//
+		
+		...the rest...
+		
+		-->
+		
+</body></html>
