@@ -4,7 +4,7 @@ This is a project meant for encrypting c-strings from C++ code. It works as a qu
 
 The code is written in javascript and uses extensively regex for pattern matching. The code also provides feedback to the user about possible errors or success.
 
-The program needs two sources: the code whose strings to be encrypted and an additional code that will include all defines and functions needed for decryption. This last code can be put into an obfus.h file.
+The program needs two sources: the code(entire code..the program contains a parser that can diferentiate between executable code and strings) whose strings to be encrypted and an additional code that will include all defines and functions needed for decryption. This last code can be put into an obfus.h file.
 
 ### Input
 The user must input some values for the encryption:
