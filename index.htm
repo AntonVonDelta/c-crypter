@@ -3,16 +3,12 @@
 
 <script>
 /*
-Another program flow concept:
+Program flow concept:
 	main() ->split every line and feed it into
 	  ->parseLine():
-			-var a=strip_comment  	//saves comment for later to be added
-			-var b=strip_strings	//saves all strings in an array
-			-var c=encrypt_strings(b)	//the encrypted version of arrays
-			-var d=check_line_type	//checks if the line contains an inline-array with strings or just a simple string...
-			...considering -d- change the line
-
-
+	     ->pre_parse() the line
+		 ->loop through strings and encrypt them
+		 ->return result
 */
 
 	//Generate/modify this code here: https://www.freeformatter.com/javascript-escape.html#ad-output
