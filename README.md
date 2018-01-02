@@ -19,7 +19,7 @@ The encryption algorithm is a simple one. The key is defined by the user and eve
 
 ### Encrypted format
 For string arrays the program will do the following:
-- comment the original line
+- add the original line as a comment
 - transform all strings into hex arrays of the encrypted characters
 - add the decryption function call
 
