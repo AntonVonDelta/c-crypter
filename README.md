@@ -16,6 +16,7 @@ The user must input some values for the encryption:
 
 ### Encryption
 The encryption algorithm is a simple one. The key is defined by the user and every character found in every string is XORed with that key. The code can diferentiate between a declared string-array `char arr[][]={"string1","string2"}` up to two dimensions  and simple strings used as parameteres in function calls `strlen("string")`.
+As an extra security measure the null charcater is replaced with the specified code which is also encrypted. At runtime this is reversed.
 
 ### Encrypted format
 For string arrays the program will do the following:
@@ -30,4 +31,4 @@ For inline-used strings:
  
 ### Attention:
 - It is important to make sure that strings are not split between lines. No multiline-string support.
-
+- Unicode strings are not supported. E.g: `L"string"`
