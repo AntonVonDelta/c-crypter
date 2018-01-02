@@ -25,8 +25,8 @@ For string arrays the program will do the following:
 
 For inline-used strings:
 - create a define for the string using a custom generator: `#define str_<generated-short-name>_<string-hash> <string-index>`. This is stored in obfus code.
- -add encrypted string to `content` array in obfus code.
- -replace original string with a function call to the decrypting method.
+ - add encrypted string to `content` array in obfus code.
+ - replace original string with a function call to the decrypting method.
  
 ### Attention:
 - It is important to make sure that strings are not split between lines. No multiline-string support.
