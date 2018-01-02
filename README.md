@@ -13,6 +13,7 @@ The user must input some values for the encryption:
 - source code
 - 'obfus' code (default provided)
 
+It not necessary to reset obfus code to default for every program that needs to be encrypted. New encrypted strings are added to obfus section without any interaction needed.
 
 ### Encryption
 The encryption algorithm is a simple one. The key is defined by the user and every character found in every string is XORed with that key. The code can diferentiate between a declared string-array `char arr[][]={"string1","string2"}` up to two dimensions  and simple strings used as parameteres in function calls `strlen("string")`.
