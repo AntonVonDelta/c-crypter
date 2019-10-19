@@ -6,6 +6,7 @@ The code is written in javascript and uses extensively regex for pattern matchin
 
 The program needs two sources: the code(entire code..the program contains a parser that can diferentiate between executable code and strings) whose strings to be encrypted and an additional code that will include all defines and functions needed for decryption. This last code can be put into an obfus.h file.
 
+Test here: https://antonvondelta.github.io/c-crypter/
 ### Input
 The user must input some values for the encryption:
 - encryption key
